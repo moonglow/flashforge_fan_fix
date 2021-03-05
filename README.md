@@ -7,3 +7,4 @@ Supported printers:
 
 - FlashForge DreamerNX
 - FlashForge Dreamer
+- FlashForge Creator Max ( untested )
