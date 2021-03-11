@@ -17,8 +17,12 @@ GPIO##PORT->BSRR = ((odr & (1u<<PIN)) << 16u) | (~odr & (1u<<PIN));\
 #define TIM_IRQN    TIM1_BRK_TIM9_IRQn
 #define TIM_PERIOD  0xFFFFu
 
+#if ( GUIDER == 1 ) || ( FINDER == 1 )
+#define FAN_1 F, 4 /* guider or finder */
+#else
 #define FAN_1 F, 5
-#define FAN_2 E, 1 /* printer case fan */
+#define FAN_2 E, 1 /* printer case rear fan */
+#endif
 
 void __attribute__((section (".patch_location"))) TIM1_BRK_TIM9_IRQHandler( void )
 {
@@ -55,7 +59,7 @@ void __attribute__((section (".patch_location"))) hw_config_timer( void )
 
 #define FAN_PWM_TO_PERC( _pwm ) ((_pwm*1000)/TIM_PERIOD)
 #define FAN_MAX (900) /* 90% */
-#define FAN_MIN (150) /* 15%  */
+#define FAN_MIN (100) /* 10%  */
 
 void __attribute__((section (".patch_location"))) timer_pwm_set( uint32_t value )
 {
@@ -115,20 +119,52 @@ int __attribute__((section (".patch_location")))  gcode_int_param( char t )
 void __attribute__((section (".patch_location"))) hook_m106( void *port, uint32_t pin )
 {
   int speed = gcode_int_param( 'S' );
+  int index = gcode_int_param( 'P' );
 
   /* if no param was found or param too hight */
   if( ( speed < 0 ) || ( speed > 255 ) )
     speed = 255;
 
-  speed *= 257; /* from 0...255 => 0...65535 */
-  timer_pwm_set( speed );
+  if( index <= 0 ) /* print cooling fan */
+  {
+    speed *= 257; /* from 0...255 => 0...65535 */
+    timer_pwm_set( speed );
+  }
+#if !defined( GUIDER ) && !defined( FINDER )
+  else if( index == 1 ) /* rear fan */
+  {
+    /* disable rear fan logic */
+#if defined( REAR_CASE_ENABLE )
+    *(uint8_t*)REAR_CASE_ENABLE = 0;
+#endif
+    if( !speed )
+      PIN_LOW( FAN_2 ); /* turn it off */
+    else
+      PIN_HI( FAN_2 ); /* any positive value => on */
+  }
+#endif
   return;
 }
 
 /* fan off */
 void __attribute__((section (".patch_location"))) hook_m107( void *port, uint32_t pin )
 {
-  timer_pwm_set( 0 );
+  int index = gcode_int_param( 'P' );
+
+  if( index <= 0 ) /* print cooling fan */
+  {
+    timer_pwm_set( 0 );
+  }
+#if !defined( GUIDER ) && !defined( FINDER )
+  else if( index == 1 ) /* rear fan */
+  {
+    /* disable rear fan logic */
+#if defined( REAR_CASE_ENABLE )
+    *(uint8_t*)REAR_CASE_ENABLE = 0;
+#endif
+    PIN_LOW( FAN_2 );
+  }
+#endif
   return;
 }
 
@@ -142,5 +178,4 @@ int main( void )
 {
   for(;;);
 }
-
 

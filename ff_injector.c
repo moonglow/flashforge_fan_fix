@@ -138,12 +138,6 @@ int find_signature( uint8_t *mem, int size, char *psz_sig )
 #define FIRMWARE_FLASH_SIZE   ((1024-64)*1024)
 #define TIM9_ISR_OFFSET       ( 0x000000A0 )
 
-/* 
-  Dreamer NX function hook addresses
-  0x08011728 => FAN ON
-  0x08011746 => FAN OFF
-*/
-
 int main(void)
 {
   uint8_t *p;
@@ -151,6 +145,7 @@ int main(void)
   char buffer[0x100], *s;
   uint32_t isr_addr = 0, m106_addr = 0, m107_addr = 0;
   uint32_t sec_addr = 0, sec_size = 0;
+  int res;
 
   /* read addresses from map file */
   FILE *map;
@@ -208,14 +203,74 @@ int main(void)
   printf( "\tm106_hook: 0x%08X\n", m106_addr );
   printf( "\tm107_hook: 0x%08X\n", m107_addr );
 
-  p = load_file( FW_NAME, &size, FIRMWARE_FLASH_SIZE );
+  p = load_file( FW_NAME ".bin", &size, FIRMWARE_FLASH_SIZE );
   if( !p )
   {
     printf( "no file was found\n" );
     return -1;
   }
 
+#if 1
+  /* remove rear case control from G-Code */
+  static char rear_fan_control_on_sig[] = 
+  "0120" /* MOVS R0, #1 */
+  "??49" /* LDR R1, =g_case_fan_state */
+  "0870" /* STRB R0, [R1] => g_case_fan_state = 1 */
+  "0221" /* MOVS R1, #2 => BIT = 2 */
+  "??48" /* LDR R0, =GPIOE => PORT = GPIOE */
+  "??F???F?" /* CALL GPIO_SET_BITS */
+  ;
 
+  res = find_signature( p, size, rear_fan_control_on_sig );
+  if( res > 0 && is_brunch( p + res + 10 ) )
+  {
+    printf( "Rear case fan ON: 0x%08X\n", FLASH_BASE + res );
+    /* patch CALL GPIO_SET_BITS to NOP NOP */
+    memcpy( p + res + 10, "\x00\xbf\x00\xbf", 4 );
+  }
+
+  static char rear_fan_control_off_sig[] = 
+  "0020" /* MOVS R0, #0 */
+  "??49" /* LDR R1, =g_case_fan_state */
+  "0870" /* STRB R0, [R1] => g_case_fan_state = 0 */
+  "0221" /* MOVS R1, #2 => BIT = 2 */
+  "??48" /* LDR R0, =GPIOE => PORT = GPIOE */
+  "??F???F?" /* CALL GPIO_RESET_BITS */
+  ;
+
+  res = find_signature( p, size, rear_fan_control_off_sig );
+  if( res > 0 && is_brunch( p + res + 10 ) )
+  {
+    printf( "Rear case fan OFF: 0x%08X\n", FLASH_BASE + res );
+    /* patch CALL GPIO_RESET_BITS to NOP NOP */
+    memcpy( p + res + 10, "\x00\xbf\x00\xbf", 4 );
+  }
+#endif
+
+#if 1
+  /* G-Code temp checks patch */
+  static char check_temp_sig[] = 
+  "0228" /* CMP R0, #2 - ctemp sensor id is 2 ( BED ) */
+  "01D1" /* BNE jump_if_sensor_id_not_equal_to_2 */
+  "??20" /* MOVS R0, #0x82 - set R0 to 130°C ( temp limit for bed ) */
+  "00E0" /* B  check_temp */
+  "??20" /* MOVS R0, #0xF8 - set R0 to 248°C ( temp limit for hotend ) */
+  ;
+/*
+  change it to:
+  "5FF48C70" - MOVS.W R0, #280 - global temp limit for hotend and bed now 280°C
+  "00BF"     - NOP
+*/
+  res = find_signature( p, size, check_temp_sig );
+  if( res > 0 )
+  {
+    printf( "Temp checks found at: 0x%08X\n", FLASH_BASE + res );
+    /* patch it */
+    memcpy( p + res, "\x5f\xf4\x8c\x70\x00\xbf", 6 );
+  }
+#endif
+
+#if defined( M106_CALL_ADDRESS ) && defined( M107_CALL_ADDRESS )
   /* all addresses from MAP file */
   /* TIM1_BRK_TIM9_IRQHandler */
   patch_addr( isr_addr, &p[TIM9_ISR_OFFSET] );
@@ -250,12 +305,14 @@ int main(void)
   uint8_t *p_payload;
 
   p_payload = load_file( "patch.bin", &payload_size, 0 );
+  assert( p_payload );
 
   memcpy( &p[sec_addr-FLASH_BASE], &p_payload[sec_addr-FLASH_BASE], sec_size );
 
   free( p_payload );
+#endif
 
-  FILE *f = fopen( "patched_firmware.bin", "wb" );
+  FILE *f = fopen( FW_NAME "_patched.bin", "wb" );
   if( !f )
   {
     printf( "output file could not be created\n" );
@@ -266,7 +323,9 @@ int main(void)
     fclose( f );
   }
 
-  /* 
+
+#if 0
+  /*
     try to find all useful patterns like that:
     MOVS    R1, #0x20   : 20 21
     LDR     R0, =GPIOF  : XX 48
@@ -297,7 +356,7 @@ int main(void)
     
     printf( "ADDR: 0x%08X\n", FLASH_BASE + inst_addr );
   }
-
+#endif
   free( p );
 
   printf( "done\n" );
