@@ -35,7 +35,7 @@ void __attribute__((section (".patch_location"))) TIM1_BRK_TIM9_IRQHandler( void
   }
   if( sr & TIM_SR_UIF )
   {
-		PIN_HI( FAN_1 );
+    PIN_HI( FAN_1 );
     TIM_DEV->SR &= ~TIM_SR_UIF;
   }
 }

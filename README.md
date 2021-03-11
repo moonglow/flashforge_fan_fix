@@ -1,8 +1,8 @@
 #  FlashForge
 
 #### The following GCode commands have been updated:
-`M106 [P<index>] [S<speed>]`
-`M107 [P<index>]`
+* `M106 [P<index>] [S<speed>]`
+* `M107 [P<index>]`
 
 ```
 P - fan index, 0 - cooling fan (used also if parameter was omitted), 1 - rear case fan
@@ -24,3 +24,6 @@ M106 P1 S200 - for rear case fan, speed is nominal value, it can be only ON/OFF 
 - Finder (PWM/280°C) ( `untested` )
 - Inventor (PWM/REAR FAN/280°C) ( `untested` )
 - Creator Pro 2 (280°C) ( `untested` )
+
+#### Support me
+<a href="https://www.buymeacoffee.com/moonglow" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" height="41" width="174"></a>
