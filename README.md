@@ -23,7 +23,7 @@ M106 P1 S200 - for rear case fan, speed is nominal value, it can be only ON/OFF 
 - Guider (PWM/280°C) ( `untested` )
 - Finder (PWM/280°C) ( `untested` )
 - Inventor (PWM/REAR FAN/280°C) ( `untested` )
-- Creator Pro 2 (280°C) ( `untested` )
+- Creator Pro 2 (280°C)
 
 #### Support me
 <a href="https://www.buymeacoffee.com/moonglow" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" height="41" width="174"></a>
