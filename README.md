@@ -26,4 +26,5 @@ M106 P1 S200 - for rear case fan, speed is nominal value, it can be only ON/OFF 
 - Creator Pro 2 (280°C)
 
 #### Support me
-<a href="https://www.buymeacoffee.com/moonglow" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+- <a href="https://www.patreon.com/bePatron?u=58145249" data-patreon-widget-type="become-patron-button">Become a Patron!</a>
+- **Bitcoin (P2WPKH):** bc1qstnsjqu2kw9v2axens54ycegn3stwvluq7ze5j
